@@ -69,7 +69,7 @@ cd deploy
 # Lizenzschlüssel abfragen
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "LIZENZSCHLÜSSEL BENÖTIGT"
+echo "SCHRITT 1: LIZENZSCHLÜSSEL"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "Bitte geben Sie Ihren Lizenzschlüssel ein:"
@@ -83,6 +83,48 @@ if [ -z "$LICENSE_KEY" ]; then
 fi
 
 print_status "Lizenzschlüssel erhalten"
+
+# GitHub Zugang abfragen
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "SCHRITT 2: GITHUB ZUGANG"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Das Hauptrepository ist privat. Bitte wählen Sie:"
+echo "1) GitHub Personal Access Token verwenden"
+echo "2) Server-Repository verwenden (falls eingerichtet)"
+echo ""
+printf "Auswahl (1 oder 2): "
+read -r REPO_CHOICE
+
+if [ "$REPO_CHOICE" = "1" ]; then
+    echo ""
+    echo "Erstellen Sie einen Token unter:"
+    echo "https://github.com/settings/tokens"
+    echo "(Benötigte Berechtigung: repo)"
+    echo ""
+    printf "GitHub Username: "
+    read -r GITHUB_USER
+    printf "Personal Access Token: "
+    read -s GITHUB_PAT
+    echo ""
+    export GITHUB_USER
+    export GITHUB_PAT
+elif [ "$REPO_CHOICE" = "2" ]; then
+    echo ""
+    echo "Server-Repository Zugangsdaten:"
+    printf "Username [pi-deploy]: "
+    read -r GIT_USER
+    GIT_USER=${GIT_USER:-pi-deploy}
+    printf "Password: "
+    read -s GIT_PASS
+    echo ""
+    export GIT_USER
+    export GIT_PASS
+    export USE_SERVER_REPO=true
+else
+    print_error "Ungültige Auswahl"
+fi
 
 # Device ID anzeigen
 chmod +x install.sh

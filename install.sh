@@ -176,11 +176,36 @@ mkdir -p "$DATA_DIR/tiles"
 
 # Clone Hauptrepository
 print_status "Lade Anwendung herunter..."
+
+# Prüfe ob Server-Repository verwendet werden soll
+if [ "$USE_SERVER_REPO" = "true" ] && [ ! -z "$GIT_USER" ] && [ ! -z "$GIT_PASS" ]; then
+    # Server-Repository verwenden
+    REPO_URL="http://${GIT_USER}:${GIT_PASS}@91.99.228.2:8090/git/stabsstelle.git"
+    print_status "Verwende Server-Repository"
+elif [ ! -z "$GITHUB_TOKEN" ]; then
+    # Mit Token klonen
+    REPO_URL="https://${GITHUB_TOKEN}@github.com/MLeprich/Stabsstelle.git"
+elif [ ! -z "$GITHUB_USER" ] && [ ! -z "$GITHUB_PAT" ]; then
+    # Mit User und PAT
+    REPO_URL="https://${GITHUB_USER}:${GITHUB_PAT}@github.com/MLeprich/Stabsstelle.git"
+else
+    # Frage nach GitHub Credentials
+    echo ""
+    echo "Das Hauptrepository ist privat. Bitte GitHub-Zugang eingeben:"
+    echo "(Erstellen Sie einen Personal Access Token unter: https://github.com/settings/tokens)"
+    echo ""
+    read -p "GitHub Username: " GITHUB_USER
+    read -s -p "GitHub Personal Access Token: " GITHUB_PAT
+    echo ""
+    REPO_URL="https://${GITHUB_USER}:${GITHUB_PAT}@github.com/MLeprich/Stabsstelle.git"
+fi
+
 if [ -d "$INSTALL_DIR/.git" ]; then
     cd "$INSTALL_DIR"
+    git remote set-url origin "$REPO_URL"
     git pull origin main
 else
-    git clone "$MAIN_REPO" "$INSTALL_DIR"
+    git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
 # Python Virtual Environment
