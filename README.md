@@ -258,11 +258,18 @@ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 - **E-Mail**: support@digitmi.de
 - **Issue Tracker**: [GitHub Issues](https://github.com/MLeprich/stabsstelle-pi-deploy/issues)
 
-## 📝 Lizenz
+## ⚖️ Rechtliches
 
-Copyright © 2025 Digitmi. Alle Rechte vorbehalten.
+### Open Source Deployment-Scripts
+Die Deployment-Scripts in diesem Repository stehen unter der [MIT License](LICENSE) zur freien Verfügung.
 
-Die Nutzung dieser Software erfordert eine gültige Lizenz. Siehe [Lizenz-Tiers](#lizenz-tiers) für Details.
+### Proprietäre Hauptanwendung
+Die Stabsstelle-Hauptanwendung ist proprietäre Software und erfordert eine gültige kommerzielle Lizenz.
+Details zu Lizenzen: [Lizenz-Tiers](#lizenz-tiers)
+
+### Haftungsausschluss
+Diese Software wird ohne Gewährleistung bereitgestellt. Die Nutzung erfolgt auf eigene Verantwortung.
+Für produktiven Einsatz in kritischen Infrastrukturen wird professioneller Support empfohlen.
 
 ## 🔄 Changelog
 
