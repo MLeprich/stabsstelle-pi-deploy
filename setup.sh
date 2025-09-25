@@ -40,13 +40,8 @@ echo ""
 # Root-Check
 if [ "$EUID" -ne 0 ]; then
     print_warning "Script läuft nicht als root."
-    echo "Möchten Sie mit sudo fortfahren? (j/n)"
-    read -r response
-    if [[ "$response" =~ ^[Jj]$ ]]; then
-        exec sudo "$0" "$@"
-    else
-        print_error "Installation abgebrochen. Bitte als root ausführen."
-    fi
+    print_info "Starte mit sudo neu..."
+    exec sudo bash "$0" "$@"
 fi
 
 # Arbeitsverzeichnis
