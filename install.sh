@@ -92,22 +92,47 @@ echo ""
 check_root
 check_pi
 
-# Lizenz-Abfrage
-echo ""
-echo "Bitte geben Sie Ihren Lizenzschlüssel ein:"
-echo "(Format: XXXX-XXXX-XXXX-XXXX)"
+# Spezielle Optionen behandeln
+if [ "$1" = "--get-device-id" ]; then
+    get_device_id
+    exit 0
+fi
 
-# Prüfe ob wir von einer Pipe kommen (curl | bash)
-if [ -t 0 ]; then
-    # Interaktive Shell - normale Eingabe
-    read -r LICENSE_KEY
+# Lizenz-Abfrage
+# Prüfe verschiedene Quellen für Lizenzschlüssel
+if [ "$1" = "--license-file" ] && [ -f "$2" ]; then
+    # Lizenz aus Datei
+    LICENSE_KEY=$(cat "$2")
+    print_status "Lizenzschlüssel aus Datei geladen"
+elif [ ! -z "$STABSSTELLE_LICENSE_KEY" ]; then
+    # Lizenz aus Environment-Variable
+    LICENSE_KEY="$STABSSTELLE_LICENSE_KEY"
+    print_status "Lizenzschlüssel aus Umgebungsvariable geladen"
+elif [ "$1" = "--license" ]; then
+    # Lizenz als Parameter
+    LICENSE_KEY="$2"
+    print_status "Lizenzschlüssel als Parameter übergeben"
 else
-    # Von Pipe - verwende /dev/tty für direkte Eingabe
-    read -r LICENSE_KEY < /dev/tty
+    # Interaktive Eingabe
+    echo ""
+    echo "Bitte geben Sie Ihren Lizenzschlüssel ein:"
+    echo "(Format: XXXX-XXXX-XXXX-XXXX)"
+
+    # Prüfe ob wir interaktiv sind
+    if [ -t 0 ]; then
+        # Terminal verfügbar
+        read -r LICENSE_KEY
+    elif [ -e /dev/tty ]; then
+        # Versuche /dev/tty
+        read -r LICENSE_KEY < /dev/tty
+    else
+        # Keine interaktive Eingabe möglich
+        print_error "Keine interaktive Eingabe möglich. Bitte verwenden Sie --license SCHLÜSSEL oder setzen Sie STABSSTELLE_LICENSE_KEY"
+    fi
 fi
 
 if [ -z "$LICENSE_KEY" ]; then
-    print_error "Kein Lizenzschlüssel eingegeben"
+    print_error "Kein Lizenzschlüssel verfügbar. Installation abgebrochen."
 fi
 
 print_status "Prüfe Lizenz..."

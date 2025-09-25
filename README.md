@@ -26,28 +26,45 @@ Dieses Repository enthält alle notwendigen Scripts und Konfigurationen, um die 
 
 ## 🚀 Installation
 
-### Schnellinstallation
+### Methode 1: Interaktive Installation (Empfohlen) ✅
 
 ```bash
-# Als root ausführen
+# Lädt und führt den Setup-Wizard aus
+wget -qO- https://raw.githubusercontent.com/MLeprich/stabsstelle-pi-deploy/main/easy-install.sh | bash
+```
+
+### Methode 2: Mit Lizenzschlüssel als Parameter
+
+```bash
+# Ersetzen Sie XXXX-XXXX-XXXX-XXXX mit Ihrem Lizenzschlüssel
+export STABSSTELLE_LICENSE_KEY="XXXX-XXXX-XXXX-XXXX"
 curl -sSL https://raw.githubusercontent.com/MLeprich/stabsstelle-pi-deploy/main/install.sh | sudo bash
 ```
 
-### Manuelle Installation
+### Methode 3: Setup-Wizard
 
-1. Repository klonen:
 ```bash
-git clone https://github.com/MLeprich/stabsstelle-pi-deploy.git
-cd stabsstelle-pi-deploy
+# Download und Ausführung
+wget https://raw.githubusercontent.com/MLeprich/stabsstelle-pi-deploy/main/setup.sh
+chmod +x setup.sh
+./setup.sh
 ```
 
-2. Installation starten:
+### Methode 4: Manuelle Installation
+
 ```bash
-sudo chmod +x install.sh
+# Repository klonen
+git clone https://github.com/MLeprich/stabsstelle-pi-deploy.git
+cd stabsstelle-pi-deploy
+
+# Mit Lizenz als Parameter
+sudo ./install.sh --license "XXXX-XXXX-XXXX-XXXX"
+
+# Oder interaktiv
 sudo ./install.sh
 ```
 
-3. Lizenzschlüssel eingeben, wenn gefragt (Format: XXXX-XXXX-XXXX-XXXX)
+Der Setup-Wizard führt Sie durch alle Schritte und fragt interaktiv nach dem Lizenzschlüssel.
 
 ## 🔑 Lizenzierung
 
