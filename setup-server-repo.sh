@@ -38,7 +38,8 @@ fi
 # Variablen
 REPO_DIR="/var/git/stabsstelle.git"
 WORK_DIR="/var/git/stabsstelle-work"
-SOURCE_DIR="/root/projects/Stabsstelle"
+SOURCE_DIR="/root/projects/Stabsstelle"  # Lokaler Ordner-Name
+GITHUB_REPO="git@github.com:MLeprich/stab.git"  # GitHub Repository
 NGINX_CONF="/etc/nginx/sites-available/git-stabsstelle"
 
 # 1. Git-Verzeichnis erstellen

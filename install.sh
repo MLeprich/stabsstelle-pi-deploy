@@ -21,7 +21,7 @@ INSTALL_DIR="/opt/stabsstelle"
 DATA_DIR="/var/lib/stabsstelle"
 LOG_DIR="/var/log/stabsstelle"
 CONFIG_DIR="/etc/stabsstelle"
-MAIN_REPO="https://github.com/MLeprich/Stabsstelle.git"
+MAIN_REPO="https://github.com/MLeprich/stab.git"
 SERVER_URL="https://stab.digitmi.de"
 
 # Funktionen
@@ -184,10 +184,10 @@ if [ "$USE_SERVER_REPO" = "true" ] && [ ! -z "$GIT_USER" ] && [ ! -z "$GIT_PASS"
     print_status "Verwende Server-Repository"
 elif [ ! -z "$GITHUB_TOKEN" ]; then
     # Mit Token klonen
-    REPO_URL="https://${GITHUB_TOKEN}@github.com/MLeprich/Stabsstelle.git"
+    REPO_URL="https://${GITHUB_TOKEN}@github.com/MLeprich/stab.git"
 elif [ ! -z "$GITHUB_USER" ] && [ ! -z "$GITHUB_PAT" ]; then
     # Mit User und PAT
-    REPO_URL="https://${GITHUB_USER}:${GITHUB_PAT}@github.com/MLeprich/Stabsstelle.git"
+    REPO_URL="https://${GITHUB_USER}:${GITHUB_PAT}@github.com/MLeprich/stab.git"
 else
     # Frage nach GitHub Credentials
     echo ""
@@ -197,7 +197,7 @@ else
     read -p "GitHub Username: " GITHUB_USER
     read -s -p "GitHub Personal Access Token: " GITHUB_PAT
     echo ""
-    REPO_URL="https://${GITHUB_USER}:${GITHUB_PAT}@github.com/MLeprich/Stabsstelle.git"
+    REPO_URL="https://${GITHUB_USER}:${GITHUB_PAT}@github.com/MLeprich/stab.git"
 fi
 
 if [ -d "$INSTALL_DIR/.git" ]; then
