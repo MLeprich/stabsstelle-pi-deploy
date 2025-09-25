@@ -216,17 +216,32 @@ source venv/bin/activate
 
 # Installiere Python-Pakete
 print_status "Installiere Python-Abhängigkeiten..."
-pip install --upgrade pip >/dev/null 2>&1
+pip install --upgrade pip || print_error "Pip Upgrade fehlgeschlagen"
 
 # Erstelle requirements-pi.txt wenn nicht vorhanden
 if [ ! -f "$INSTALL_DIR/requirements-pi.txt" ]; then
+    # Prüfe ob requirements.txt existiert
+    if [ ! -f "$INSTALL_DIR/requirements.txt" ]; then
+        print_error "requirements.txt nicht gefunden in $INSTALL_DIR"
+    fi
+
     # Filtere PostgreSQL-spezifische Pakete aus
-    grep -v "psycopg2\|pg8000" "$INSTALL_DIR/requirements.txt" > "$INSTALL_DIR/requirements-pi.txt"
+    print_status "Erstelle requirements-pi.txt für SQLite..."
+    grep -v "psycopg2\|pg8000" "$INSTALL_DIR/requirements.txt" > "$INSTALL_DIR/requirements-pi.txt" || true
     echo "python-dotenv" >> "$INSTALL_DIR/requirements-pi.txt"
     echo "requests" >> "$INSTALL_DIR/requirements-pi.txt"
 fi
 
-pip install -r requirements-pi.txt >/dev/null 2>&1
+print_status "Installiere Python-Pakete (das kann einige Minuten dauern)..."
+pip install -r requirements-pi.txt 2>&1 | tee /tmp/pip-install.log | grep -E "^(Collecting|Installing|Successfully)" || true
+
+# Prüfe ob Installation erfolgreich war
+if ! python3 -c "import flask" 2>/dev/null; then
+    print_error "Flask konnte nicht installiert werden. Prüfe /tmp/pip-install.log"
+    exit 1
+fi
+
+print_status "Python-Pakete erfolgreich installiert"
 
 # Lizenz-Validierung mit Python
 print_status "Validiere Lizenz mit Server..."
@@ -275,7 +290,13 @@ if __name__ == "__main__":
         sys.exit(1)
 EOF
 
-python3 /tmp/validate_license.py "$LICENSE_KEY" "$DEVICE_ID" "$HOSTNAME" || print_error "Lizenz-Validierung fehlgeschlagen"
+VALIDATION_RESULT=$(python3 /tmp/validate_license.py "$LICENSE_KEY" "$DEVICE_ID" "$HOSTNAME" 2>&1)
+if echo "$VALIDATION_RESULT" | grep -q "SUCCESS:"; then
+    print_status "Lizenz erfolgreich validiert"
+else
+    print_warning "Lizenz-Validierung fehlgeschlagen (Offline-Modus aktiv)"
+    # Fahre trotzdem fort für Offline-Installation
+fi
 
 # Speichere Konfiguration
 print_status "Erstelle Konfigurationsdateien..."
