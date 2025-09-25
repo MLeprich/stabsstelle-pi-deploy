@@ -1,0 +1,97 @@
+# Stabsstelle Docker Image - Production Ready
+FROM python:3.11-slim-bookworm as builder
+
+# Build-Dependencies
+RUN apt-get update && apt-get install -y \
+    gcc g++ make build-essential \
+    python3-dev libffi-dev libssl-dev \
+    libjpeg-dev zlib1g-dev libpng-dev \
+    libxml2-dev libxslt1-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+COPY requirements-complete.txt .
+RUN pip install --upgrade pip setuptools wheel && \
+    pip wheel --wheel-dir /wheels -r requirements-complete.txt
+
+# Runtime Image
+FROM python:3.11-slim-bookworm
+
+# Runtime-Dependencies
+RUN apt-get update && apt-get install -y \
+    sqlite3 nginx supervisor curl wget \
+    libjpeg62-turbo libpng16-16 libxml2 libxslt1.1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Kopiere wheels vom Builder
+COPY --from=builder /wheels /wheels
+
+# Installiere Python-Pakete
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir --no-index --find-links=/wheels /wheels/*.whl && \
+    rm -rf /wheels
+
+# Erstelle Verzeichnisse
+RUN mkdir -p /app /var/lib/stabsstelle/{uploads,backups,tiles} \
+    /var/log/{stabsstelle,nginx,supervisor}
+
+WORKDIR /app
+
+# Environment
+ENV FLASK_APP=run.py \
+    FLASK_ENV=production \
+    DATABASE_URL=sqlite:///var/lib/stabsstelle/stabsstelle.db \
+    PYTHONUNBUFFERED=1
+
+# Nginx Config
+RUN echo 'server { \
+    listen 80; \
+    server_name _; \
+    client_max_body_size 100M; \
+    location / { \
+        proxy_pass http://127.0.0.1:8004; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+        proxy_http_version 1.1; \
+        proxy_set_header Upgrade $http_upgrade; \
+        proxy_set_header Connection "upgrade"; \
+        proxy_read_timeout 300; \
+    } \
+    location /static { \
+        alias /app/app/static; \
+        expires 30d; \
+    } \
+}' > /etc/nginx/sites-enabled/default
+
+# Supervisor Config
+RUN echo '[supervisord] \n\
+nodaemon=true \n\
+[program:nginx] \n\
+command=/usr/sbin/nginx -g "daemon off;" \n\
+autostart=true \n\
+[program:gunicorn] \n\
+command=gunicorn --workers 2 --bind 127.0.0.1:8004 --timeout 120 run:app \n\
+directory=/app \n\
+autostart=true \n\
+environment=DATABASE_URL="sqlite:///var/lib/stabsstelle/stabsstelle.db"' \
+> /etc/supervisor/conf.d/supervisord.conf
+
+# Entrypoint
+RUN echo '#!/bin/bash \n\
+set -e \n\
+if [ ! -f /app/run.py ]; then \n\
+    echo "ERROR: Mount app to /app" \n\
+    exit 1 \n\
+fi \n\
+if [ ! -f /var/lib/stabsstelle/stabsstelle.db ]; then \n\
+    cd /app \n\
+    flask db upgrade || flask db init && flask db upgrade \n\
+fi \n\
+exec supervisord -c /etc/supervisor/conf.d/supervisord.conf' > /entrypoint.sh \
+&& chmod +x /entrypoint.sh
+
+EXPOSE 80
+HEALTHCHECK CMD curl -f http://localhost/ || exit 1
+VOLUME ["/var/lib/stabsstelle", "/app"]
+ENTRYPOINT ["/entrypoint.sh"]

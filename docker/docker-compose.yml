@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  stabsstelle:
+    image: stabsstelle:latest
+    container_name: stabsstelle
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - app_data:/app
+      - db_data:/var/lib/stabsstelle
+      - log_data:/var/log/stabsstelle
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=sqlite:///var/lib/stabsstelle/stabsstelle.db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 60s
+    networks:
+      - stabsstelle_net
+
+volumes:
+  app_data:
+  db_data:
+  log_data:
+
+networks:
+  stabsstelle_net:
+    driver: bridge

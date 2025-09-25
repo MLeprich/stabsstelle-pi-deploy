@@ -1,0 +1,34 @@
+# Stabsstelle Pi - Minimal Production Image
+FROM python:3.11-slim
+
+# System dependencies
+RUN apt-get update && apt-get install -y \
+    nginx supervisor sqlite3 curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python dependencies (pre-compiled)
+COPY wheels/ /wheels/
+RUN pip install --no-cache-dir /wheels/*.whl && rm -rf /wheels
+
+# Application
+COPY app/ /app/
+WORKDIR /app
+
+# Configuration
+COPY configs/nginx.conf /etc/nginx/sites-enabled/default
+COPY configs/supervisor.conf /etc/supervisor/conf.d/supervisord.conf
+COPY scripts/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Volumes
+VOLUME ["/var/lib/stabsstelle", "/var/log/stabsstelle"]
+
+# Ports
+EXPOSE 80
+
+# Health check
+HEALTHCHECK CMD curl -f http://localhost/ || exit 1
+
+# Start
+ENTRYPOINT ["/entrypoint.sh"]

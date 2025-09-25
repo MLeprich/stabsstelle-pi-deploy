@@ -1,6 +1,6 @@
-# Stabsstelle Pi Deployment
+# 🚀 Stabsstelle Pi Deployment
 
-Automatisiertes Deployment-System für die Stabsstelle-Software auf Raspberry Pi Geräten mit Offline-Funktionalität und bidirektionaler Synchronisation.
+Automatisiertes Docker-basiertes Deployment-System für die Stabsstelle-Software auf Raspberry Pi Geräten mit vollständiger Offline-Funktionalität.
 
 ## 🎯 Übersicht
 
@@ -26,42 +26,48 @@ Dieses Repository enthält alle notwendigen Scripts und Konfigurationen, um die 
 
 ## 🚀 Installation
 
-### Methode 1: Interaktive Installation (Empfohlen) ✅
+### Methode 1: Docker Installation (Empfohlen) 🐳
 
 ```bash
-# Lädt und führt den Setup-Wizard aus
-wget -qO- https://raw.githubusercontent.com/MLeprich/stabsstelle-pi-deploy/main/easy-install.sh | bash
+# Ein-Befehl-Installation mit Docker
+curl -fsSL https://raw.githubusercontent.com/MLeprich/stabsstelle-pi-deploy/main/docker/install-docker.sh | bash
 ```
 
-### Methode 2: Mit Lizenzschlüssel als Parameter
+### Methode 2: Offline Bundle Installation 📦
+
+Für Systeme ohne Internetverbindung:
 
 ```bash
-# Ersetzen Sie XXXX-XXXX-XXXX-XXXX mit Ihrem Lizenzschlüssel
-export STABSSTELLE_LICENSE_KEY="XXXX-XXXX-XXXX-XXXX"
-curl -sSL https://raw.githubusercontent.com/MLeprich/stabsstelle-pi-deploy/main/install.sh | sudo bash
+# 1. Bundle auf einem System mit Internet herunterladen:
+wget https://github.com/MLeprich/stabsstelle-pi-deploy/releases/latest/download/stabsstelle-docker-bundle.tar.gz
+
+# 2. Auf Pi übertragen und installieren:
+tar xzf stabsstelle-docker-bundle.tar.gz
+cd stabsstelle-bundle
+sudo ./install.sh
 ```
 
-### Methode 3: Setup-Wizard
-
-```bash
-# Download und Ausführung
-wget https://raw.githubusercontent.com/MLeprich/stabsstelle-pi-deploy/main/setup.sh
-chmod +x setup.sh
-./setup.sh
-```
-
-### Methode 4: Manuelle Installation
+### Methode 3: Docker Compose
 
 ```bash
 # Repository klonen
 git clone https://github.com/MLeprich/stabsstelle-pi-deploy.git
-cd stabsstelle-pi-deploy
+cd stabsstelle-pi-deploy/docker
 
-# Mit Lizenz als Parameter
-sudo ./install.sh --license "XXXX-XXXX-XXXX-XXXX"
+# Mit Docker Compose starten
+docker-compose up -d
+```
 
-# Oder interaktiv
-sudo ./install.sh
+### Methode 4: Vorgefertigtes Docker Image
+
+```bash
+# Docker Image direkt verwenden
+docker run -d \
+  --name stabsstelle \
+  --restart always \
+  -p 80:80 \
+  -v stabsstelle_data:/var/lib/stabsstelle \
+  ghcr.io/mleprich/stabsstelle:latest
 ```
 
 Der Setup-Wizard führt Sie durch alle Schritte und fragt interaktiv nach dem Lizenzschlüssel.
@@ -83,6 +89,14 @@ Der Setup-Wizard führt Sie durch alle Schritte und fragt interaktiv nach dem Li
 ```bash
 python3 /opt/stabsstelle/tools/license_validator.py check
 ```
+
+## 🐳 Docker Images
+
+Wir stellen vorgefertigte Docker Images bereit:
+
+- `ghcr.io/mleprich/stabsstelle:latest` - Neueste stabile Version
+- `ghcr.io/mleprich/stabsstelle:arm64` - ARM64 für Raspberry Pi
+- `ghcr.io/mleprich/stabsstelle:armv7` - ARMv7 für ältere Pi Modelle
 
 ## 🔄 Synchronisation
 
@@ -288,7 +302,21 @@ Details zu Lizenzen: [Lizenz-Tiers](#lizenz-tiers)
 Diese Software wird ohne Gewährleistung bereitgestellt. Die Nutzung erfolgt auf eigene Verantwortung.
 Für produktiven Einsatz in kritischen Infrastrukturen wird professioneller Support empfohlen.
 
+## 📥 Download Links
+
+### Aktuelle Releases
+- [Docker Bundle (Offline)](https://github.com/MLeprich/stabsstelle-pi-deploy/releases/latest/download/stabsstelle-docker-bundle.tar.gz)
+- [Installer Script](https://raw.githubusercontent.com/MLeprich/stabsstelle-pi-deploy/main/docker/install-docker.sh)
+- [Docker Compose](https://raw.githubusercontent.com/MLeprich/stabsstelle-pi-deploy/main/docker/docker-compose.yml)
+
 ## 🔄 Changelog
+
+### Version 1.1.0 (2025-09-25) 🐳
+- NEU: Docker-basierte Installation
+- NEU: Vorgefertigte Docker Images
+- NEU: Offline Bundle mit allen Dependencies
+- VERBESSERT: Robuste Installation ohne Module-Fehler
+- BEHOBEN: SSL-Zertifikat und Pip-Probleme
 
 ### Version 1.0.0 (2025-01-25)
 - Initiales Release

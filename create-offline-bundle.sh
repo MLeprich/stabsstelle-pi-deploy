@@ -1,72 +1,165 @@
 #!/bin/bash
 #
-# Create Offline Installation Bundle for Raspberry Pi
-# Läuft auf dem SERVER, nicht auf dem Pi!
+# Create Offline Bundle for Stabsstelle Docker Deployment
 #
 
 set -e
 
 echo "============================================"
-echo "  Creating Offline Bundle for Pi"
+echo "  Creating Offline Bundle"
 echo "============================================"
+echo ""
 
-BUNDLE_DIR="/tmp/stabsstelle-bundle"
-OUTPUT_FILE="/root/stabsstelle-pi-bundle.tar.gz"
+BUNDLE_NAME="stabsstelle-docker-bundle"
+BUNDLE_DIR="/tmp/$BUNDLE_NAME"
+OUTPUT_FILE="$BUNDLE_NAME-$(date +%Y%m%d).tar.gz"
 
-# Cleanup old bundle
-rm -rf "$BUNDLE_DIR"
-mkdir -p "$BUNDLE_DIR"
+# Cleanup
+rm -rf $BUNDLE_DIR
+mkdir -p $BUNDLE_DIR
 
-# Clone repository
-echo "1. Cloning repository..."
-cd "$BUNDLE_DIR"
-git clone https://github.com/MLeprich/stab.git stabsstelle
+# 1. Docker Image exportieren
+echo "→ Exporting Docker image..."
+docker pull ghcr.io/mleprich/stabsstelle:latest || {
+    echo "Building local image..."
+    cd docker
+    docker build -t ghcr.io/mleprich/stabsstelle:latest -f Dockerfile.production .
+    cd ..
+}
+docker save ghcr.io/mleprich/stabsstelle:latest | gzip > $BUNDLE_DIR/stabsstelle.tar.gz
 
-# Create virtual environment
-echo "2. Creating virtual environment..."
-cd stabsstelle
-python3 -m venv venv
-source venv/bin/activate
+# 2. Docker Compose kopieren
+echo "→ Copying Docker Compose files..."
+cp docker/docker-compose.yml $BUNDLE_DIR/
+cp docker/install-docker.sh $BUNDLE_DIR/
 
-# Download all packages
-echo "3. Downloading all packages..."
-pip download -r requirements.txt -d "$BUNDLE_DIR/packages"
-
-# Create installer script
-cat > "$BUNDLE_DIR/install-offline.sh" << 'INSTALLER'
+# 3. Offline Installer erstellen
+cat > $BUNDLE_DIR/install-offline.sh << 'INSTALLER'
 #!/bin/bash
 #
-# Offline Installer for Stabsstelle
+# Offline Installer for Stabsstelle Docker
 #
 
-echo "Installing Stabsstelle (Offline Mode)..."
+set -e
 
-# Install from local packages
-cd /opt/stabsstelle
-source venv/bin/activate
+echo "============================================"
+echo "  Stabsstelle Offline Installation"
+echo "============================================"
+echo ""
 
-# Install all packages from local directory
-pip install --no-index --find-links=/tmp/stabsstelle-bundle/packages -r requirements-sqlite.txt
+# Check Docker
+if ! command -v docker &> /dev/null; then
+    echo "ERROR: Docker ist nicht installiert!"
+    echo "Bitte installieren Sie Docker zuerst:"
+    echo "  curl -fsSL https://get.docker.com | sh"
+    exit 1
+fi
 
-echo "Installation complete!"
+# Load Docker image
+echo "→ Loading Docker image..."
+docker load < stabsstelle.tar.gz
+
+# Create installation directory
+INSTALL_DIR="/opt/stabsstelle-docker"
+mkdir -p $INSTALL_DIR
+cp docker-compose.yml $INSTALL_DIR/
+
+# Start container
+cd $INSTALL_DIR
+docker-compose down 2>/dev/null || true
+docker-compose up -d
+
+# Wait for startup
+sleep 10
+
+# Check status
+if docker ps | grep -q stabsstelle; then
+    IP=$(hostname -I | cut -d' ' -f1)
+    echo ""
+    echo "✓ Installation erfolgreich!"
+    echo ""
+    echo "Zugriff: http://$IP"
+    echo ""
+else
+    echo "ERROR: Container konnte nicht gestartet werden"
+    docker logs stabsstelle
+fi
 INSTALLER
 
-chmod +x "$BUNDLE_DIR/install-offline.sh"
+chmod +x $BUNDLE_DIR/install-offline.sh
 
-# Create requirements without PostgreSQL
-grep -v "psycopg2\|pg8000" stabsstelle/requirements.txt > "$BUNDLE_DIR/requirements-sqlite.txt"
+# 4. README hinzufügen
+cat > $BUNDLE_DIR/README.txt << 'README'
+Stabsstelle Docker Offline Bundle
+==================================
 
-# Create bundle
-echo "4. Creating bundle..."
+Dieses Bundle enthält alles für eine Offline-Installation:
+
+1. Docker Image (stabsstelle.tar.gz)
+2. Docker Compose Konfiguration
+3. Installer-Scripts
+
+Installation:
+-------------
+1. Bundle entpacken: tar xzf stabsstelle-docker-bundle-*.tar.gz
+2. In Verzeichnis wechseln: cd stabsstelle-docker-bundle
+3. Installer ausführen: sudo ./install-offline.sh
+
+Voraussetzungen:
+---------------
+- Docker muss installiert sein
+- Port 80 muss frei sein
+
+Nach der Installation:
+---------------------
+- Web-Interface: http://[PI-IP]
+- Standard-Login: admin / admin
+- Logs: docker logs stabsstelle
+
+Support:
+--------
+https://github.com/MLeprich/stabsstelle-pi-deploy/issues
+README
+
+# 5. Bundle erstellen
+echo "→ Creating bundle archive..."
 cd /tmp
-tar czf "$OUTPUT_FILE" stabsstelle-bundle/
+tar czf $OUTPUT_FILE $BUNDLE_NAME/
+
+# Größe für GitHub prüfen (100MB Limit)
+SIZE=$(du -m $OUTPUT_FILE | cut -f1)
+if [ $SIZE -gt 95 ]; then
+    echo "→ Bundle zu groß für GitHub ($SIZE MB), teile auf..."
+
+    # In 95MB Teile splitten
+    split -b 95M $OUTPUT_FILE $OUTPUT_FILE.part-
+    rm $OUTPUT_FILE
+
+    # Merge-Script erstellen
+    cat > merge-bundle.sh << 'MERGE'
+#!/bin/bash
+cat stabsstelle-docker-bundle-*.part-* > stabsstelle-docker-bundle.tar.gz
+rm stabsstelle-docker-bundle-*.part-*
+echo "Bundle zusammengefügt: stabsstelle-docker-bundle.tar.gz"
+MERGE
+    chmod +x merge-bundle.sh
+
+    echo ""
+    echo "Bundle aufgeteilt in:"
+    ls -lh $OUTPUT_FILE.part-*
+    echo ""
+    echo "Zum Zusammenfügen: ./merge-bundle.sh"
+else
+    echo ""
+    echo "✓ Bundle erstellt: $OUTPUT_FILE"
+    echo "  Größe: $SIZE MB"
+fi
+
+# Cleanup
+rm -rf $BUNDLE_DIR
 
 echo ""
-echo "Bundle created: $OUTPUT_FILE"
-echo "Size: $(du -h $OUTPUT_FILE | cut -f1)"
+echo "Nächste Schritte:"
+echo "1. Bundle zu GitHub Releases hochladen"
+echo "2. README.md mit Download-Links aktualisieren"
 echo ""
-echo "Transfer to Pi and extract with:"
-echo "  scp $OUTPUT_FILE pi@raspberry:"
-echo "  tar xzf stabsstelle-pi-bundle.tar.gz"
-echo "  cd stabsstelle-bundle"
-echo "  ./install-offline.sh"
