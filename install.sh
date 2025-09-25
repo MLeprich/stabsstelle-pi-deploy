@@ -233,7 +233,40 @@ if [ ! -f "$INSTALL_DIR/requirements-pi.txt" ]; then
 fi
 
 print_status "Installiere Python-Pakete (das kann einige Minuten dauern)..."
-pip install -r requirements-pi.txt 2>&1 | tee /tmp/pip-install.log | grep -E "^(Collecting|Installing|Successfully)" || true
+
+# Prüfe Internet-Verbindung
+if ! ping -c 1 pypi.org >/dev/null 2>&1; then
+    print_warning "Keine Verbindung zu PyPI. Versuche alternative Methode..."
+
+    # Versuche mit --index-url
+    pip install --index-url=https://pypi.python.org/simple/ -r requirements-pi.txt 2>&1 | tee /tmp/pip-install.log || {
+        print_warning "Installation fehlgeschlagen. Versuche mit Timeout und Retries..."
+
+        # Versuche mit erhöhtem Timeout und Retries
+        pip install --default-timeout=100 --retries 5 -r requirements-pi.txt 2>&1 | tee /tmp/pip-install.log || {
+            print_error "Pip Installation fehlgeschlagen. Prüfe Netzwerkverbindung."
+            echo ""
+            echo "Mögliche Lösungen:"
+            echo "1. Prüfe Internet-Verbindung: ping 8.8.8.8"
+            echo "2. Prüfe DNS: nslookup pypi.org"
+            echo "3. Versuche manuell: pip install flask"
+            echo ""
+            echo "Letzte Fehler aus Log:"
+            tail -10 /tmp/pip-install.log
+            exit 1
+        }
+    }
+else
+    # Normale Installation mit Fortschrittsanzeige
+    pip install --progress-bar on -r requirements-pi.txt 2>&1 | tee /tmp/pip-install.log || {
+        print_warning "Erste Installation fehlgeschlagen, versuche erneut mit Timeout..."
+        pip install --default-timeout=100 --retries 5 -r requirements-pi.txt 2>&1 | tee /tmp/pip-install.log || {
+            print_error "Installation fehlgeschlagen"
+            tail -10 /tmp/pip-install.log
+            exit 1
+        }
+    }
+fi
 
 # Prüfe ob Installation erfolgreich war
 if ! python3 -c "import flask" 2>/dev/null; then
