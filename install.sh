@@ -47,7 +47,12 @@ check_root() {
 check_pi() {
     if ! grep -q "Raspberry Pi" /proc/device-tree/model 2>/dev/null; then
         print_warning "Dies scheint kein Raspberry Pi zu sein. Fortfahren? (y/n)"
-        read -r response
+        # Prüfe ob wir von einer Pipe kommen
+        if [ -t 0 ]; then
+            read -r response
+        else
+            read -r response < /dev/tty
+        fi
         if [[ ! "$response" =~ ^[Yy]$ ]]; then
             exit 1
         fi
@@ -91,7 +96,15 @@ check_pi
 echo ""
 echo "Bitte geben Sie Ihren Lizenzschlüssel ein:"
 echo "(Format: XXXX-XXXX-XXXX-XXXX)"
-read -r LICENSE_KEY
+
+# Prüfe ob wir von einer Pipe kommen (curl | bash)
+if [ -t 0 ]; then
+    # Interaktive Shell - normale Eingabe
+    read -r LICENSE_KEY
+else
+    # Von Pipe - verwende /dev/tty für direkte Eingabe
+    read -r LICENSE_KEY < /dev/tty
+fi
 
 if [ -z "$LICENSE_KEY" ]; then
     print_error "Kein Lizenzschlüssel eingegeben"
