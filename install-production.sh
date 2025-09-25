@@ -42,7 +42,7 @@ if [ -z "$GITHUB_TOKEN" ]; then
 fi
 
 # Validate token format (basic check)
-if [[ ! "$GITHUB_TOKEN" =~ ^ghp_[a-zA-Z0-9]{36}$ ]]; then
+if [[ ! "$GITHUB_TOKEN" =~ ^YOUR_GITHUB_TOKEN[a-zA-Z0-9]{36}$ ]]; then
     echo -e "${YELLOW}Warning: Token format looks unusual. Continuing anyway...${NC}"
 fi
 
