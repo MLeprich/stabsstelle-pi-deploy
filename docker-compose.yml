@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  stabsstelle:
+    image: stabsstelle-sqlite:latest
+    container_name: stabsstelle-sqlite
+    ports:
+      - "5000:5000"
+    volumes:
+      - stabsstelle_data:/app/data
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=False
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  nginx:
+    image: nginx:alpine
+    container_name: stabsstelle-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/sites-enabled/stabsstelle:ro
+      - /etc/ssl/stab:/etc/ssl/stab:ro
+    depends_on:
+      - stabsstelle
+    restart: unless-stopped
+
+volumes:
+  stabsstelle_data:
+    driver: local
