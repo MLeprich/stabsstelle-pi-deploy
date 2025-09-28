@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  stabsstelle:
+    image: stabsstelle-sqlite:latest
+    container_name: stabsstelle-sqlite
+    ports:
+      - "5000:5000"
+    volumes:
+      - stabsstelle_data:/app/data
+      - ./sync_manager.py:/app/sync_manager.py:ro
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=False
+      - SYNC_SERVER_URL=https://stab.digitmi.de
+      - LICENSE_KEY=${LICENSE_KEY:-}
+      - SYNC_INTERVAL=${SYNC_INTERVAL:-300}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  sync-manager:
+    image: stabsstelle-sqlite:latest
+    container_name: stabsstelle-sync
+    volumes:
+      - stabsstelle_data:/app/data
+      - ./sync_manager.py:/app/sync_manager.py:ro
+    environment:
+      - SYNC_SERVER_URL=https://stab.digitmi.de
+      - LICENSE_KEY=${LICENSE_KEY:-}
+      - SYNC_INTERVAL=${SYNC_INTERVAL:-300}
+    command: python3 /app/sync_manager.py continuous
+    restart: unless-stopped
+    depends_on:
+      - stabsstelle
+
+  nginx:
+    image: nginx:alpine
+    container_name: stabsstelle-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/stabsstelle.conf:/etc/nginx/sites-enabled/stabsstelle:ro
+      - /etc/ssl/stab:/etc/ssl/stab:ro
+    depends_on:
+      - stabsstelle
+    restart: unless-stopped
+
+volumes:
+  stabsstelle_data:
+    driver: local
